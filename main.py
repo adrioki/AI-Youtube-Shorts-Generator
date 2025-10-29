@@ -1,42 +1,66 @@
+from flask import Flask, request, jsonify
+import os
 from Components.YoutubeDownloader import download_youtube_video
 from Components.Edit import extractAudio, crop_video
 from Components.Transcription import transcribeAudio
 from Components.LanguageTasks import GetHighlight
 from Components.FaceCrop import crop_to_vertical, combine_videos
 
-url = input("Enter YouTube video URL: ")
-Vid= download_youtube_video(url)
-if Vid:
-    Vid = Vid.replace(".webm", ".mp4")
-    print(f"Downloaded video and audio files successfully! at {Vid}")
+app = Flask(__name__)
+OUTPUT_DIR = "outputs/shorts"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    Audio = extractAudio(Vid)
-    if Audio:
+@app.route("/generate", methods=["POST"])
+def generate_short():
+    data = request.get_json()
+    url = data.get("url")
+    if not url:
+        return jsonify({"error": "Missing 'url' parameter"}), 400
 
+    try:
+        # 1️⃣ Télécharger la vidéo
+        Vid = download_youtube_video(url)
+        if not Vid:
+            return jsonify({"error": "Unable to download video"}), 500
+
+        Vid = Vid.replace(".webm", ".mp4")
+        
+        # 2️⃣ Extraire l'audio
+        Audio = extractAudio(Vid)
+        if not Audio:
+            return jsonify({"error": "No audio file found"}), 500
+
+        # 3️⃣ Transcrire
         transcriptions = transcribeAudio(Audio)
-        if len(transcriptions) > 0:
-            TransText = ""
+        if not transcriptions:
+            return jsonify({"error": "No transcriptions found"}), 500
 
-            for text, start, end in transcriptions:
-                TransText += (f"{start} - {end}: {text}")
+        # 4️⃣ Générer Highlights
+        TransText = "".join([f"{start}-{end}:{text}" for text, start, end in transcriptions])
+        start, stop = GetHighlight(TransText)
 
-            start , stop = GetHighlight(TransText)
-            #handle the case when the highlight starts from 0s
-            if start>0 and stop>0 and stop>start:
-                print(f"Start: {start} , End: {stop}")
+        if start <= 0 or stop <= 0 or stop <= start:
+            return jsonify({"error": "Error in getting highlight"}), 500
 
-                Output = "Out.mp4"
+        # 5️⃣ Créer le short
+        Output = os.path.join(OUTPUT_DIR, "Out.mp4")
+        crop_video(Vid, Output, start, stop)
 
-                crop_video(Vid, Output, start, stop)
-                croped = "croped.mp4"
+        croped = os.path.join(OUTPUT_DIR, "croped.mp4")
+        crop_to_vertical(Output, croped)
 
-                crop_to_vertical("Out.mp4", croped)
-                combine_videos("Out.mp4", croped, "Final.mp4")
-            else:
-                print("Error in getting highlight")
-        else:
-            print("No transcriptions found")
-    else:
-        print("No audio file found")
-else:
-    print("Unable to Download the video")
+        Final = os.path.join(OUTPUT_DIR, "Final.mp4")
+        combine_videos(Output, croped, Final)
+
+        return jsonify({"status": "success", "short_path": Final}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "details": str(e)}), 500
+
+
+@app.route("/", methods=["GET"])
+def home():
+    return "✅ YouTube Shorts Generator API is running!"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)

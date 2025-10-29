@@ -1,30 +1,21 @@
-# Serveur et API
-flask
-
-# YouTube video download
-pytube
-
-# Audio / vidéo
-ffmpeg-python
-moviepy
-pydub
-opencv-python-headless
-imageio-ffmpeg
-
-# Transcription et Langchain
-openai
-langchain
-langchain-core
-langchain-openai
-langchain-text-splitters
-langsmith
-faster-whisper
-
-# Utilitaires
-numpy
-requests
-orjson
-regex
-python-dotenv
-tqdm
-humanfriendly
+flask==3.1.2
+pytube==15.0.0
+ffmpeg-python==0.2.0
+moviepy==2.2.1
+pydub==0.25.1
+opencv-python-headless==4.12.0.88
+imageio-ffmpeg==0.6.0
+openai==2.6.1
+langchain==1.0.2
+langchain-core==1.0.1
+langchain-openai==1.0.1
+langchain-text-splitters==1.0.0
+langsmith==0.4.38
+faster-whisper==1.2.0
+numpy==2.2.6
+requests==2.32.5
+orjson==3.11.4
+regex==2025.10.23
+python-dotenv==1.2.1
+tqdm==4.67.1
+humanfriendly==10.0
